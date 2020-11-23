@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.appName }}
+    env: {{ .Values.envShort }}
+spec:
+{{- if not .Values.hpa.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}
+  strategy:
+    type: {{ .Values.deployment.strategy }}
+    rollingUpdate:
+      maxUnavailable: {{ .Values.deployment.maxUnavailable }}
+      maxSurge: {{ .Values.deployment.maxSurge }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.appName }}
+        env: {{ .Values.envShort }}
+      annotations:
+        timestamp: "{{ date "20060102150405" .Release.Time }}"
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: {{ .Values.appName }}
+        image: {{ .Values.image }}
+        resources:
+          limits:
+            cpu: "{{ .Values.resources.limits.cpu }}"
+            memory: "{{ .Values.resources.limits.memory }}"
+          requests:
+            cpu: "{{ .Values.resources.limits.cpu }}"
+            memory: "{{ .Values.resources.limits.memory }}"
+        ports:
+        - containerPort: {{ .Values.appPort }}
+        readinessProbe:
+          successThreshold: {{ .Values.healthcheck.readinessSuccess }}
+          failureThreshold: {{ .Values.healthcheck.readinessFailure }}
+          httpGet:
+            path: {{ .Values.healthcheck.path }}
+            port: {{ .Values.appPort }}
+          initialDelaySeconds: {{ .Values.healthcheck.readinessDelay }}
+          periodSeconds: {{ .Values.healthcheck.period }}
+          timeoutSeconds: {{ .Values.healthcheck.timeout }}
+        livenessProbe:
+          successThreshold: {{ .Values.healthcheck.livenessSuccess }}
+          failureThreshold: {{ .Values.healthcheck.livenessFailure }}
+          httpGet:
+            path:  {{ .Values.healthcheck.path }}
+            port: {{ .Values.appPort }}
+          initialDelaySeconds: {{ .Values.healthcheck.livenessDelay }}
+          periodSeconds: {{ .Values.healthcheck.period }}
+          timeoutSeconds: {{ .Values.healthcheck.timeout }}
+        lifecycle:
+          preStop:
+            exec:
+              command:
+                - sh
+                - -c
+                - sleep 45
+        env:
+        {{- range $key, $value := .Values.environments }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}

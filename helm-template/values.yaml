@@ -1,0 +1,49 @@
+---
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+namespace: apps
+
+service:
+  type: ClusterIP
+  port: 80
+
+healthcheck:
+  path: /
+  readinessSuccess: 2
+  readinessFailure: 2
+  readinessDelay: 20
+  livenessSuccess: 1
+  livenessFailure: 2
+  livenessDelay: 20
+  period: 10
+  timeout: 5
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1024Mi
+  requests:
+    cpu: 1000m
+    memory: 1024Mi
+appPort: 8080
+dnsSufix:
+
+replicaCount: 2
+deployment:
+  maxUnavailable: 0%
+  maxSurge: 100%
+  strategy: RollingUpdate
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  resourceName: cpu
+  targetType: Utilization
+  targetAvgUtilization: 50
+
+ingress:
+  enabled: true
+  scheme: internal
+  target: ip
